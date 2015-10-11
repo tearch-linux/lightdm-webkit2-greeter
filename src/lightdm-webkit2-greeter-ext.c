@@ -144,6 +144,16 @@ get_user_logged_in_cb (JSContextRef context,
 }
 
 static JSValueRef
+get_lock_hint_cb (JSContextRef context,
+                       JSObjectRef thisObject,
+                       JSStringRef propertyName,
+                       JSValueRef *exception)
+{
+    LightDMGreeter *greeter = JSObjectGetPrivate (thisObject);
+    return JSValueMakeBoolean (context, lightdm_get_lock_hint (greeter));
+}
+
+static JSValueRef
 get_language_code_cb (JSContextRef context,
                       JSObjectRef thisObject,
                       JSStringRef propertyName,
@@ -832,6 +842,7 @@ static const JSStaticValue lightdm_session_values[] =
 static const JSStaticValue lightdm_greeter_values[] =
 {
     { "hostname", get_hostname_cb, NULL, kJSPropertyAttributeReadOnly },
+    { "lock_hint", get_lock_hint_cb, NULL, kJSPropertyAttributeReadOnly },
     { "users", get_users_cb, NULL, kJSPropertyAttributeReadOnly },
     { "default_language", get_default_language_cb, NULL, kJSPropertyAttributeReadOnly },
     { "languages", get_languages_cb, NULL, kJSPropertyAttributeReadOnly },
