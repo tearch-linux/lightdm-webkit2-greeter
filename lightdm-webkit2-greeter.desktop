@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=WebKit2 Greeter
+Comment=WebKit2 Greeter
+Exec=/home/dustin/lightdm-webkit2-greeter/greeter.py
+Type=Application
+X-Ubuntu-Gettext-Domain=lightdm-webkit2-greeter

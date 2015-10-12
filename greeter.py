@@ -27,7 +27,7 @@
 #  along with Greeter; If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from greeter.main_window import GreeterMainWindow
+from greeter.main_window import GreeterMainView
 from PyQt5 import QtWidgets, QtCore
 import gettext
 import locale
@@ -38,10 +38,11 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     # app.setApplicationName('Antergos Package Assistant')
     # app.setApplicationVersion(POODLE_VERSION)
-
-    greeter_app = GreeterMainWindow()
-    greeter_app.setWindowFlags(QtCore.Qt.BypassWindowManagerHint)
+    screen = app.desktop().availableGeometry(-1)
+    greeter_app = GreeterMainView(screen=screen)
     greeter_app.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+    # greeter_app.setWindowFlags(QtCore.Qt.BypassWindowManagerHint)
+
     # app.aboutToQuit.connect(poodle_app.cleanup)
 
     greeter_app.show()
