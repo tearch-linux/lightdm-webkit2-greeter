@@ -176,6 +176,11 @@ main(int argc, char **argv) {
 	WebKitWebContext *context;
 	GtkCssProvider *css_provider;
 
+	setlocale (LC_ALL, "");
+	bindtextdomain (GETTEXT_PACKAGE, LOCALE_DIR);
+	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+	textdomain (GETTEXT_PACKAGE);
+
 	gtk_init(&argc, &argv);
 
 	g_unix_signal_add(SIGTERM, (GSourceFunc) gtk_main_quit, /* is_callback */ NULL);
