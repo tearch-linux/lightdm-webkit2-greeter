@@ -165,6 +165,7 @@ message_received_cb(WebKitUserContentManager *manager,
 }
 
 
+#if 0
 static gboolean
 fade_timer_cb(gpointer data) {
 	gdouble opacity;
@@ -186,8 +187,8 @@ static void
 quit_cb(void) {
 	// Fade out the greeter
 	g_timeout_add(40, (GSourceFunc) fade_timer_cb, NULL);
-
 }
+#endif
 
 
 int
@@ -234,7 +235,7 @@ main(int argc, char **argv) {
 	default_display = gdk_display_get_default();
 
 	gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-	gdk_screen_get_monitor_geometry(screen, gdk_screen_get_primary_monitor(screen), &geometry);
+	gdk_monitor_get_geometry(gdk_display_get_primary_monitor(default_display), &geometry);
 	gtk_window_set_default_size(GTK_WINDOW(window), geometry.width, geometry.height);
 	gtk_window_move(GTK_WINDOW(window), geometry.x, geometry.y);
 
@@ -283,7 +284,7 @@ main(int argc, char **argv) {
 	webkit_web_view_set_background_color(WEBKIT_WEB_VIEW(web_view), gdk_rgba_copy(&bg_color));
 
 	/* Disable the context (right-click) menu. */
-	//g_signal_connect(web_view, "context-menu", G_CALLBACK(context_menu_cb), NULL);
+	g_signal_connect(web_view, "context-menu", G_CALLBACK(context_menu_cb), NULL);
 
 	/* There's no turning back now, let's go! */
 	gtk_container_add(GTK_CONTAINER(window), web_view);

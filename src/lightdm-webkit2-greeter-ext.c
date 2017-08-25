@@ -39,7 +39,7 @@
 #include <glib/gstdio.h>
 
 #include <webkit2/webkit-web-extension.h>
-#include <webkitdom/WebKitDOMCustom.h>
+#include <webkitdom/webkitdom.h>
 #include <JavaScriptCore/JavaScript.h>
 
 #include <lightdm.h>

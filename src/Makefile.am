@@ -49,5 +49,3 @@ DISTCLEANFILES = \
 	$(lightdm_webkit2_greeter_built_sources)
 
 EXTRA_DIST = lightdm-webkit2-greeter-application.css
-
-
