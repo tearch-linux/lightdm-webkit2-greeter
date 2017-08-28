@@ -825,12 +825,11 @@ start_session_sync_cb (STDFUNCARGS)
   gboolean result;
   GError *err = NULL;
 
-  if (argumentCount != 1)
+  if (argumentCount >= 1)
     {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
+      session = arg_to_string (context, arguments[0], exception);
     }
 
-  session = arg_to_string (context, arguments[0], exception);
   result = lightdm_greeter_start_session_sync (GREETER, session, &err);
   g_free (session);
 

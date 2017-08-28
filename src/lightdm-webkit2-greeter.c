@@ -246,11 +246,6 @@ main (int argc, char **argv)
   config_timeout =
     g_key_file_get_integer (keyfile, "greeter", "screensaver-timeout", NULL);
 
-  if (!theme)
-    {
-      theme = "default";
-    }
-
   /* Setup the main window */
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   screen = gtk_window_get_screen (GTK_WINDOW (window));
@@ -321,7 +316,7 @@ main (int argc, char **argv)
   gtk_container_add (GTK_CONTAINER (window), web_view);
   webkit_web_view_load_uri (WEBKIT_WEB_VIEW (web_view),
 			    g_strdup_printf ("file://%s/%s/index.html",
-					     THEME_DIR, theme));
+					     THEME_DIR, theme ? theme : "default"));
 
   gtk_widget_show_all (window);
   gdk_window_set_cursor (gtk_widget_get_window (GTK_WIDGET (window)),
