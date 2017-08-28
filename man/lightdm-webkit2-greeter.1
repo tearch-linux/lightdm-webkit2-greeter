@@ -13,11 +13,6 @@ lightdm-webkit2-greeter is a LightDM greeter that uses webkit2 for theming\&.  T
 using a combination of HTML and Javascript\&.
 .PP
 .SH "THEME JAVASCRIPT API"
-Please note that all properties and functions which are marked as "deprecated" are
-only available for backwards compatibility and will be removed in a future version of
-lightdm-webkit2-greeter\&.  Theme authors should not use any deprecated properties or
-functions in new works and should update any existing works which make use of
-deprecated properties and/or functions to ensure continued proper functionality\&.
 .PP
 The following functions \fBmust\fR be provided by the greeter theme and callable on the global "window" object\&.
 .PP
@@ -55,8 +50,7 @@ actions within LightDM\&.
 .RS 4
 Specifies the username of the user we'd like to start authenticating as\&.  Note that
 if you call lightdm.authenticate with no argument, LightDM (via PAM) will issue
-a show_prompt() call to ask for the username\&. The older function
-lightdm\&.start_authentication() has been deprecated\&.
+a show_prompt() call to ask for the username\&.
 .RE
 .PP
 \fBlightdm\&.authenticate_as_guest()\fR
@@ -72,8 +66,7 @@ authenticating\&.
 .PP
 \fBlightdm\&.cancel_autologin()\fR
 .RS 4
-Cancels the authentication of the autologin user\&.  The older function
-lightdm\&.cancel_timed_login() has been deprecated.
+Cancels the authentication of the autologin user\&.
 .RE
 .PP
 \fBlightdm\&.get_hint(hint_name)\fR
@@ -91,16 +84,12 @@ Hibernates the system, if the greeter has the authority to do so\&.
 Once LightDM has successfully authenticated the user, start the user's session
 by calling this function\&.  "session" is the authenticated user's session\&.
 If no session is passed, start the authenticated user with the system default
-session. The older function lightdm\&.login(user, session) has been
-deprecated\&.
+session.
 .RE
 .PP
 \fBlightdm\&.respond(text)\fR
 .RS 4
 When LightDM has prompted for input, provide the response to LightDM\&.
-The deprecated function was "provide_secret"\&.  This is still available for
-backwards compatibility, but authors of greeters should move to using
-lightdm.respond()\&.
 .RE
 .PP
 \fBlightdm\&.restart()\fR
@@ -133,15 +122,13 @@ Boolean\&. Indicates the guest user should be used for autologin\&.
 .PP
 \fBlightdm\&.autologin_timeout\fR
 .RS 4
-Number\&. The number of seconds to wait before automatically logging in\&. The
-older variable lightdm\&.timed_user_delay has been deprecated\&.
+Number\&. The number of seconds to wait before automatically logging in\&.
 .RE
 .PP
 \fBlightdm\&.autologin_user\fR
 .RS 4
 String\&. The name of the user account that should be logged into
-automatically after timed login delay has passed\&. The older variable
-lightdm\&.timed_login_user has been deprecated\&.
+automatically after timed login delay has passed\&.
 .RE
 .PP
 \fBlightdm\&.can_hibernate\fR
@@ -196,15 +183,13 @@ Boolean\&. Indicates if lightdm is currently in the authentication phase\&.
 .PP
 \fBlightdm\&.language\fR
 .RS 4
-String\&. The currently selected language\&. The older variable name
-lightdm\&.default_language is deprecated\&.
+String\&. The currently selected language\&.
 .RE
 .PP
 \fBlightdm\&.layout\fR
 .RS 4
 String\&. The name of the currently active keyboard layout\&. To change the
-layout, assign a valid layout name to this variable\&. The older variable name
-lightdm\&.default_layout is deprecated\&.
+layout, assign a valid layout name to this variable\&.
 .RE
 .PP
 \fBlightdm\&.layouts\fR

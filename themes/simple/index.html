@@ -101,6 +101,10 @@
           return;
         }
         text = greeterutil.txt2html(text);
+        if (text.split("\n").length == 1) {
+          /* Single line, center it */
+          text = "<center>" + text + "</center>";
+        }
         messages = document.getElementById("messages");
         messages.style.visibility = "visible";
         if (type == "error") {
@@ -117,7 +121,7 @@
         if (lightdm.is_authenticated) {
           lightdm.start_session_sync(); // Start default session
         } else {
-          show_message("<center>Authentication Failed</center>", "error");
+          show_message("Authentication failed.", "error");
           setTimeout(start_authentication, 3000);
         }
       }
