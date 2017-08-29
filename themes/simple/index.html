@@ -43,7 +43,6 @@
         width: 50%;
         height: 60%;
         overflow: auto;
-        visibility: hidden;
         margin-left: auto;
         margin-right: auto;
       }
@@ -97,20 +96,16 @@
        */
 
       function show_message(text, type) {
-        if (text.length == 0) {
-          return;
-        }
         text = greeterutil.txt2html(text);
         if (text.split("\n").length == 1) {
           /* Single line, center it */
           text = "<center>" + text + "</center>";
         }
-        messages = document.getElementById("messages");
-        messages.style.visibility = "visible";
         if (type == "error") {
           text = "<font color=\"red\">" + text + "</font>";
         }
-        messages.innerHTML = messages.innerHTML + "<p>" + text + "</p>";
+        messages = document.getElementById("messages");
+        messages.innerHTML = text;
       }
 
       /*
@@ -130,23 +125,14 @@
       /*                Functions local to this greeter                    */
       /*********************************************************************/
 
-      /**
-       * clear_messages
-       */
-
-      function clear_messages() {
-        messages = document.getElementById("messages");
-        messages.innerHTML = "";
-        messages.style.visibility = "hidden";
-      }
-
       /*
        * Kickoff the authentication process
        */
 
       function start_authentication() {
-        clear_messages();
-        lightdm.authenticate(); // start with null userid, have pam prompt for userid.
+        messages = document.getElementById("messages");
+        messages.innerHTML = ""; // Clear messages
+        lightdm.authenticate();  // Have PAM prompt for userid.
       }
 
       /*

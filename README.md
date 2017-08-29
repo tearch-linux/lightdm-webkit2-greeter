@@ -20,8 +20,6 @@
 |**gtk+ 3**               |gtk3     |libgtk-3-0             | gtk3                  | gtk3                   |
 |**webkit2gtk-4.0**       |webkitgtk|libwebkit2gtk-4.0-dev  | webkitgtk4            | webkit2gtk3            |
 |**dbus-glib-1**         |dbus-glib|libdbus-glib-1-dev     | dbus-glib             | dbus-1-glib            |
-|**exo-csource**          |exo      |exo-utils              | exo-devel             | exo-tools              |
-|[**antergos-wallpapers**](http://antergos.com/antergos-wallpapers-0.6.zip)| N/A | N/A| N/A | N/A| N/A |
 
 #### How To Build
 The process is slightly different depending on how you obtain the source.

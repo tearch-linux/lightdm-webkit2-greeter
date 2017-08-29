@@ -227,7 +227,6 @@ escape (const gchar * text)
 /*                               Callbacks                                  */
 /****************************************************************************/
 
-
 static JSValueRef
 get_user_name_cb (STDARGS)
 {
@@ -276,8 +275,7 @@ get_user_image_cb (STDARGS)
 
   if (result)
     {
-      /* Couldn't access */
-      return JSValueMakeNull (context);
+      return JSValueMakeNull (context); /* Couldn't access */
     }
   else
     {
@@ -469,7 +467,6 @@ get_language_cb (STDARGS)
 static JSValueRef
 get_layouts_cb (STDARGS)
 {
-
   JSObjectRef array;
   const GList *layouts, *link;
   guint i, n_layouts = 0;
@@ -602,7 +599,6 @@ get_autologin_timeout_cb (STDARGS)
 static JSValueRef
 cancel_autologin_cb (STDFUNCARGS)
 {
-
   lightdm_greeter_cancel_autologin (GREETER);
   return JSValueMakeNull (context);
 }
@@ -685,7 +681,6 @@ respond_cb (STDFUNCARGS)
 static JSValueRef
 cancel_authentication_cb (STDFUNCARGS)
 {
-
   lightdm_greeter_cancel_authentication (GREETER);
   return JSValueMakeNull (context);
 }
@@ -757,7 +752,6 @@ get_in_authentication_cb (STDARGS)
 static JSValueRef
 get_can_suspend_cb (STDARGS)
 {
-
   return JSValueMakeBoolean (context, lightdm_get_can_suspend ());
 }
 
@@ -765,7 +759,6 @@ get_can_suspend_cb (STDARGS)
 static JSValueRef
 suspend_cb (STDFUNCARGS)
 {
-
   lightdm_suspend (NULL);
   return JSValueMakeNull (context);
 }
@@ -781,7 +774,6 @@ get_can_hibernate_cb (STDARGS)
 static JSValueRef
 hibernate_cb (STDFUNCARGS)
 {
-
   lightdm_hibernate (NULL);
   return JSValueMakeNull (context);
 }
@@ -797,7 +789,6 @@ get_can_restart_cb (STDARGS)
 static JSValueRef
 restart_cb (STDFUNCARGS)
 {
-
   lightdm_restart (NULL);
   return JSValueMakeNull (context);
 }
@@ -1344,27 +1335,25 @@ window_object_cleared_callback (WebKitScriptWorld * world,
   jsContext = webkit_frame_get_javascript_context_for_script_world (frame, world);
   globalObject = JSContextGetGlobalObject (jsContext);
 
-  gettext_class = JSClassCreate (&gettext_definition);
-  lightdm_greeter_class = JSClassCreate (&lightdm_greeter_definition);
-  lightdm_user_class = JSClassCreate (&lightdm_user_definition);
+  gettext_class          = JSClassCreate (&gettext_definition);
+  lightdm_greeter_class  = JSClassCreate (&lightdm_greeter_definition);
+  lightdm_user_class     = JSClassCreate (&lightdm_user_definition);
   lightdm_language_class = JSClassCreate (&lightdm_language_definition);
-  lightdm_layout_class = JSClassCreate (&lightdm_layout_definition);
-  lightdm_session_class = JSClassCreate (&lightdm_session_definition);
-  config_file_class = JSClassCreate (&config_file_definition);
-  greeter_util_class = JSClassCreate (&greeter_util_definition);
+  lightdm_layout_class   = JSClassCreate (&lightdm_layout_definition);
+  lightdm_session_class  = JSClassCreate (&lightdm_session_definition);
+  config_file_class      = JSClassCreate (&config_file_definition);
+  greeter_util_class     = JSClassCreate (&greeter_util_definition);
 
   gettext_object = JSObjectMake (jsContext, gettext_class, NULL);
 
-  JSObjectSetProperty (jsContext,
-               globalObject,
+  JSObjectSetProperty (jsContext, globalObject,
                JSStringCreateWithUTF8CString ("gettext"),
                gettext_object, NONE, NULL);
 
   lightdm_greeter_object =
     JSObjectMake (jsContext, lightdm_greeter_class, greeter);
 
-  JSObjectSetProperty (jsContext,
-               globalObject,
+  JSObjectSetProperty (jsContext, globalObject,
                JSStringCreateWithUTF8CString ("lightdm"),
                lightdm_greeter_object,
                NONE, NULL);
@@ -1401,88 +1390,58 @@ window_object_cleared_callback (WebKitScriptWorld * world,
 
 
 static void
-show_prompt_cb (LightDMGreeter * greeter,
-        const gchar * text,
-        LightDMPromptType type, WebKitWebExtension * extension)
+execute_js (WebKitWebExtension * extension, gchar * command_text)
 {
-
   WebKitWebPage *web_page;
   WebKitFrame *web_frame;
   JSGlobalContextRef jsContext;
-  JSStringRef command;
-  gchar *string;
-  gchar *etext;
-  const gchar *ct = "";
 
   web_page = webkit_web_extension_get_page (extension, page_id);
 
   if (web_page)
     {
+      JSStringRef command;
+
       web_frame = webkit_web_page_get_main_frame (web_page);
       jsContext = webkit_frame_get_javascript_global_context (web_frame);
-
-      switch (type)
-        {
-        case LIGHTDM_PROMPT_TYPE_QUESTION:
-          ct = "text";
-          break;
-        case LIGHTDM_PROMPT_TYPE_SECRET:
-          ct = "password";
-          break;
-        }
-
-      etext = escape (text);
-      string = g_strdup_printf ("show_prompt('%s', '%s')", etext, ct);
-      command = JSStringCreateWithUTF8CString (string);
-
+      command = JSStringCreateWithUTF8CString (command_text);
       JSEvaluateScript (jsContext, command, NULL, NULL, 0, NULL);
-
-      g_free (string);
-      g_free (etext);
+      JSStringRelease (command);
     }
 }
 
 
 static void
-show_message_cb (LightDMGreeter * greeter,
-         const gchar * text,
+show_prompt_cb (LightDMGreeter * greeter, const gchar * text,
+        LightDMPromptType type, WebKitWebExtension * extension)
+{
+  gchar *string;
+  gchar *prompt_text = escape (text);
+
+  string = g_strdup_printf ("show_prompt('%s', '%s')", prompt_text,
+                            type == LIGHTDM_PROMPT_TYPE_SECRET ? "password" : "text");
+
+  execute_js (extension, string);
+
+  g_free (string);
+  g_free (prompt_text);
+}
+
+
+static void
+show_message_cb (LightDMGreeter * greeter, const gchar * text,
          LightDMMessageType type, WebKitWebExtension * extension)
 {
-
-  WebKitWebPage *web_page;
-  WebKitFrame *web_frame;
-  JSGlobalContextRef jsContext;
-  JSStringRef command;
-  gchar *etext;
   gchar *string;
-  const gchar *mt = "";
+  gchar *message_text = escape (text);
 
-  web_page = webkit_web_extension_get_page (extension, page_id);
+  string = g_strdup_printf ("show_message('%s', '%s')", message_text,
+                            type == LIGHTDM_MESSAGE_TYPE_ERROR ? "error" : "info");
 
-  if (web_page)
-    {
-      web_frame = webkit_web_page_get_main_frame (web_page);
-      jsContext = webkit_frame_get_javascript_global_context (web_frame);
+  execute_js (extension, string);
 
-      switch (type)
-        {
-        case LIGHTDM_MESSAGE_TYPE_ERROR:
-          mt = "error";
-          break;
-        case LIGHTDM_MESSAGE_TYPE_INFO:
-          mt = "info";
-          break;
-        }
-
-      etext = escape (text);
-      string = g_strdup_printf ("show_message('%s', '%s')", etext, mt);
-      command = JSStringCreateWithUTF8CString (string);
-
-      JSEvaluateScript (jsContext, command, NULL, NULL, 0, NULL);
-
-      g_free (string);
-      g_free (etext);
-    }
+  g_free (string);
+  g_free (message_text);
 }
 
 
@@ -1490,22 +1449,7 @@ static void
 authentication_complete_cb (LightDMGreeter * greeter,
                 WebKitWebExtension * extension)
 {
-
-  WebKitWebPage *web_page;
-  WebKitFrame *web_frame;
-  JSGlobalContextRef jsContext;
-  JSStringRef command;
-
-  web_page = webkit_web_extension_get_page (extension, page_id);
-
-  if (web_page)
-    {
-      web_frame = webkit_web_page_get_main_frame (web_page);
-      jsContext = webkit_frame_get_javascript_global_context (web_frame);
-      command = JSStringCreateWithUTF8CString ("authentication_complete()");
-
-      JSEvaluateScript (jsContext, command, NULL, NULL, 0, NULL);
-    }
+  execute_js (extension, "authentication_complete()");
 }
 
 
@@ -1513,22 +1457,7 @@ static void
 autologin_timer_expired_cb (LightDMGreeter * greeter,
                 WebKitWebExtension * extension)
 {
-
-  WebKitWebPage *web_page;
-  WebKitFrame *web_frame;
-  JSGlobalContextRef jsContext;
-  JSStringRef command;
-
-  web_page = webkit_web_extension_get_page (extension, page_id);
-
-  if (web_page)
-    {
-      web_frame = webkit_web_page_get_main_frame (web_page);
-      jsContext = webkit_frame_get_javascript_global_context (web_frame);
-      command = JSStringCreateWithUTF8CString ("autologin_timer_expired()");
-
-      JSEvaluateScript (jsContext, command, NULL, NULL, 0, NULL);
-    }
+  execute_js (extension, "autologin_timer_expired()");
 }
 
 
@@ -1537,9 +1466,9 @@ webkit_web_extension_initialize (WebKitWebExtension * extension)
 {
   LightDMGreeter *greeter = lightdm_greeter_new ();
 
+  g_signal_connect (webkit_script_world_get_default (), "window-object-cleared", G_CALLBACK (window_object_cleared_callback), greeter);
   g_signal_connect (G_OBJECT (greeter), "authentication-complete", G_CALLBACK (authentication_complete_cb), extension);
   g_signal_connect (G_OBJECT (greeter), "autologin-timer-expired", G_CALLBACK (autologin_timer_expired_cb), extension);
-  g_signal_connect (webkit_script_world_get_default (), "window-object-cleared", G_CALLBACK (window_object_cleared_callback), greeter);
   g_signal_connect (G_OBJECT (greeter), "show-prompt", G_CALLBACK (show_prompt_cb), extension);
   g_signal_connect (G_OBJECT (greeter), "show-message", G_CALLBACK (show_message_cb), extension);
 
@@ -1552,5 +1481,3 @@ webkit_web_extension_initialize (WebKitWebExtension * extension)
                  CONFIG_DIR "/lightdm-webkit2-greeter.conf",
                  G_KEY_FILE_NONE, NULL);
 }
-
-/* vim: set ts=4 sw=4 tw=0 noet : */
