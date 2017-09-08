@@ -51,6 +51,8 @@ G_MODULE_EXPORT void webkit_web_extension_initialize (WebKitWebExtension * exten
 guint64 page_id = -1;
 GKeyFile *keyfile;
 
+/* Convenience defines to make the code shorter */
+
 #define USER     ((LightDMUser *)     JSObjectGetPrivate (thisObject))
 #define LAYOUT   ((LightDMLayout *)   JSObjectGetPrivate (thisObject))
 #define SESSION  ((LightDMSession *)  JSObjectGetPrivate (thisObject))
@@ -61,6 +63,9 @@ GKeyFile *keyfile;
 #define NONE        kJSPropertyAttributeNone
 #define STDARGS     JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef * exception
 #define STDFUNCARGS JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef * exception
+#define RETURNNULL  return JSValueMakeNull (context)
+#define ARGSMUST(X) if (argumentCount != (X)) { *exception = mkexception (context, ARGNOTSUPPLIED); return JSValueMakeNull (context); }
+
 
 /*
  * Put all our translatable strings up top
@@ -90,15 +95,13 @@ static JSClassRef
  */
 
 static JSValueRef
-string_or_null (JSContextRef context, const gchar * str)
+mkstringref (JSContextRef context, const gchar * str)
 {
   JSValueRef result;
   JSStringRef string;
 
   if (!str)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   string = JSStringCreateWithUTF8CString (str);
   result = JSValueMakeString (context, string);
@@ -114,28 +117,15 @@ string_or_null (JSContextRef context, const gchar * str)
  * Convert a const string to an exception which can be passed back to webkit.
  */
 
-static void
-_mkexception (JSContextRef context, JSValueRef * exception, const gchar * str)
+static JSValueRef
+mkexception (JSContextRef context, const gchar * str)
 {
-  JSValueRef result;
+  JSValueRef * exception = NULL;
   JSStringRef string = JSStringCreateWithUTF8CString (str);
   JSValueRef exceptionString = JSValueMakeString (context, string);
   JSStringRelease (string);
-  result = JSValueToObject (context, exceptionString, exception);
-
-  if (result)
-    {
-      *exception = result;
-    }
+  return JSValueToObject (context, exceptionString, exception);
 }
-
-static JSValueRef
-mkexception (JSContextRef context, JSValueRef * exception, const gchar * str)
-{
-  _mkexception (context, exception, str);
-  return JSValueMakeNull (context);
-}
-
 
 /*
  * Converts an argument to a string.
@@ -153,24 +143,20 @@ arg_to_string (JSContextRef context, JSValueRef arg, JSValueRef * exception)
 
   if (JSValueGetType (context, arg) != kJSTypeString)
     {
-      _mkexception (context, exception, EXPECTSTRING);
+      *exception = mkexception (context, EXPECTSTRING);
       return NULL;
     }
 
   string = JSValueToStringCopy (context, arg, exception);
 
   if (!string)
-    {
       return NULL;
-    }
 
   size = JSStringGetMaximumUTF8CStringSize (string);
   result = g_malloc (size);
 
   if (!result)
-    {
       return NULL;
-    }
 
   JSStringGetUTF8CString (string, result, size);
   JSStringRelease (string);
@@ -219,6 +205,7 @@ escape (const gchar * text)
   /* Replace ' with \\' */
   result = g_strreplace (escaped, "'", "\\'");
 
+  g_free (escaped);
   return result;
 }
 
@@ -227,172 +214,72 @@ escape (const gchar * text)
 /*                               Callbacks                                  */
 /****************************************************************************/
 
-static JSValueRef
-get_user_name_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_user_get_name (USER));
-}
-
-
-static JSValueRef
-get_user_real_name_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_user_get_real_name (USER));
-}
-
-
-static JSValueRef
-get_user_display_name_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_user_get_display_name (USER));
-}
-
-
-static JSValueRef
-get_user_home_directory_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_user_get_home_directory (USER));
-}
+static JSValueRef get_user_name_cb (STDARGS)                { return mkstringref (context, lightdm_user_get_name (USER)); }
+static JSValueRef get_user_real_name_cb (STDARGS)           { return mkstringref (context, lightdm_user_get_real_name (USER)); }
+static JSValueRef get_user_display_name_cb (STDARGS)        { return mkstringref (context, lightdm_user_get_display_name (USER)); }
+static JSValueRef get_user_home_directory_cb (STDARGS)      { return mkstringref (context, lightdm_user_get_home_directory (USER)); }
+static JSValueRef get_user_language_cb (STDARGS)            { return mkstringref (context, lightdm_user_get_language (USER)); }
+static JSValueRef get_user_layout_cb (STDARGS)              { return mkstringref (context, lightdm_user_get_layout (USER)); }
+static JSValueRef get_user_session_cb (STDARGS)             { return mkstringref (context, lightdm_user_get_session (USER)); }
+static JSValueRef get_user_logged_in_cb (STDARGS)           { return JSValueMakeBoolean (context, lightdm_user_get_logged_in (USER)); }
+static JSValueRef get_language_code_cb (STDARGS)            { return mkstringref (context, lightdm_language_get_code (LANGUAGE)); }
+static JSValueRef get_language_name_cb (STDARGS)            { return mkstringref (context, lightdm_language_get_name (LANGUAGE)); }
+static JSValueRef get_language_territory_cb (STDARGS)       { return mkstringref (context, lightdm_language_get_territory (LANGUAGE)); }
+static JSValueRef get_layout_name_cb (STDARGS)              { return mkstringref (context, lightdm_layout_get_name (LAYOUT)); }
+static JSValueRef get_layout_short_description_cb (STDARGS) { return mkstringref (context, lightdm_layout_get_short_description (LAYOUT)); }
+static JSValueRef get_layout_description_cb (STDARGS)       { return mkstringref (context, lightdm_layout_get_description (LAYOUT)); }
+static JSValueRef get_session_key_cb (STDARGS)              { return mkstringref (context, lightdm_session_get_key (SESSION)); }
+static JSValueRef get_session_name_cb (STDARGS)             { return mkstringref (context, lightdm_session_get_name (SESSION)); }
+static JSValueRef get_session_comment_cb (STDARGS)          { return mkstringref (context, lightdm_session_get_comment (SESSION)); }
+static JSValueRef get_hostname_cb (STDARGS)                 { return mkstringref (context, lightdm_get_hostname ()); }
+static JSValueRef get_num_users_cb (STDARGS)                { return JSValueMakeNumber (context, g_list_length (lightdm_user_list_get_users (lightdm_user_list_get_instance ()))); }
+static JSValueRef get_language_cb (STDARGS)                 { return mkstringref (context, lightdm_language_get_name ((LightDMLanguage *) lightdm_get_language ())); }
+static JSValueRef get_layout_cb (STDARGS)                   { return mkstringref (context, lightdm_layout_get_name (lightdm_get_layout ())); }
+static JSValueRef get_default_session_cb (STDARGS)          { return mkstringref (context, lightdm_greeter_get_default_session_hint (GREETER)); }
+static JSValueRef get_lock_hint_cb (STDARGS)                { return JSValueMakeBoolean (context, lightdm_greeter_get_lock_hint (GREETER)); }
+static JSValueRef get_autologin_timeout_cb (STDARGS)        { return JSValueMakeNumber (context, lightdm_greeter_get_autologin_timeout_hint (GREETER)); }
+static JSValueRef get_authentication_user_cb (STDARGS)      { return mkstringref (context, lightdm_greeter_get_authentication_user (GREETER)); }
+static JSValueRef get_has_guest_account_cb (STDARGS)        { return JSValueMakeBoolean (context, lightdm_greeter_get_has_guest_account_hint (GREETER)); }
+static JSValueRef get_hide_users_cb (STDARGS)               { return JSValueMakeBoolean (context, lightdm_greeter_get_hide_users_hint (GREETER)); }
+static JSValueRef get_select_user_cb (STDARGS)              { return mkstringref (context, lightdm_greeter_get_select_user_hint (GREETER)); }
+static JSValueRef get_select_guest_cb (STDARGS)             { return JSValueMakeBoolean (context, lightdm_greeter_get_select_guest_hint (GREETER)); }
+static JSValueRef get_autologin_user_cb (STDARGS)           { return mkstringref (context, lightdm_greeter_get_autologin_user_hint (GREETER)); }
+static JSValueRef get_autologin_guest_cb (STDARGS)          { return JSValueMakeBoolean (context, lightdm_greeter_get_autologin_guest_hint (GREETER)); }
+static JSValueRef get_is_authenticated_cb (STDARGS)         { return JSValueMakeBoolean (context, lightdm_greeter_get_is_authenticated (GREETER)); }
+static JSValueRef get_in_authentication_cb (STDARGS)        { return JSValueMakeBoolean (context, lightdm_greeter_get_in_authentication (GREETER)); }
+static JSValueRef get_can_suspend_cb (STDARGS)              { return JSValueMakeBoolean (context, lightdm_get_can_suspend ()); }
+static JSValueRef get_can_hibernate_cb (STDARGS)            { return JSValueMakeBoolean (context, lightdm_get_can_hibernate ()); }
+static JSValueRef get_can_restart_cb (STDARGS)              { return JSValueMakeBoolean (context, lightdm_get_can_restart ()); }
+static JSValueRef get_can_shutdown_cb (STDARGS)             { return JSValueMakeBoolean (context, lightdm_get_can_shutdown ()); }
+static JSValueRef cancel_autologin_cb (STDFUNCARGS)         { lightdm_greeter_cancel_autologin (GREETER); RETURNNULL; }
+static JSValueRef authenticate_as_guest_cb (STDFUNCARGS)    { lightdm_greeter_authenticate_as_guest (GREETER); RETURNNULL; }
+static JSValueRef cancel_authentication_cb (STDFUNCARGS)    { lightdm_greeter_cancel_authentication (GREETER); RETURNNULL; }
+static JSValueRef suspend_cb (STDFUNCARGS)                  { lightdm_suspend (NULL); RETURNNULL; }
+static JSValueRef hibernate_cb (STDFUNCARGS)                { lightdm_hibernate (NULL); RETURNNULL; }
+static JSValueRef restart_cb (STDFUNCARGS)                  { lightdm_restart (NULL); RETURNNULL; }
+static JSValueRef shutdown_cb (STDFUNCARGS)                 { lightdm_shutdown (NULL); RETURNNULL; }
 
 
 static JSValueRef
 get_user_image_cb (STDARGS)
 {
   const gchar *image_uri = lightdm_user_get_image (USER);
-  gchar *image_path;
   gint result;
+  gchar *image_path = g_filename_from_uri (image_uri, NULL, NULL);
 
-  image_path = g_filename_from_uri (image_uri, NULL, NULL);
-  if (image_path)
-    {
-      result = g_access (image_path, R_OK);
-      g_free (image_path);
-    }
-  else
-    {
-      result = g_access (image_uri, R_OK);
-    }
+  result = g_access (image_path ? image_path : image_uri, R_OK);
+  g_free (image_path);
 
-  if (result)
-    {
-      return JSValueMakeNull (context); /* Couldn't access */
-    }
-  else
-    {
-      return string_or_null (context, image_uri);
-    }
-}
+  if (!result)
+      return mkstringref (context, image_uri);
 
-
-static JSValueRef
-get_user_language_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_user_get_language (USER));
-}
-
-
-static JSValueRef
-get_user_layout_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_user_get_layout (USER));
-}
-
-
-static JSValueRef
-get_user_session_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_user_get_session (USER));
-}
-
-
-static JSValueRef
-get_user_logged_in_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_user_get_logged_in (USER));
-}
-
-
-static JSValueRef
-get_language_code_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_language_get_code (LANGUAGE));
-}
-
-
-static JSValueRef
-get_language_name_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_language_get_name (LANGUAGE));
-}
-
-
-static JSValueRef
-get_language_territory_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_language_get_territory (LANGUAGE));
-}
-
-
-static JSValueRef
-get_layout_name_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_layout_get_name (LAYOUT));
-}
-
-
-static JSValueRef
-get_layout_short_description_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_layout_get_short_description (LAYOUT));
-}
-
-
-static JSValueRef
-get_layout_description_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_layout_get_description (LAYOUT));
-}
-
-
-static JSValueRef
-get_session_key_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_session_get_key (SESSION));
-}
-
-
-static JSValueRef
-get_session_name_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_session_get_name (SESSION));
-}
-
-
-static JSValueRef
-get_session_comment_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_session_get_comment (SESSION));
-}
-
-
-static JSValueRef
-get_hostname_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_get_hostname ());
-}
-
-
-static JSValueRef
-get_num_users_cb (STDARGS)
-{
-  return JSValueMakeNumber (context, g_list_length (lightdm_user_list_get_users (lightdm_user_list_get_instance ())));
+  RETURNNULL;
 }
 
 
 static JSValueRef
 get_users_cb (STDARGS)
 {
-
   JSObjectRef array;
   const GList *users, *link;
   guint i, n_users = 0;
@@ -412,21 +299,16 @@ get_users_cb (STDARGS)
   array = JSObjectMakeArray (context, n_users, args, exception);
   g_free (args);
 
-  if (!array)
-    {
-      return JSValueMakeNull (context);
-    }
-  else
-    {
+  if (array)
       return array;
-    }
+
+  RETURNNULL;
 }
 
 
 static JSValueRef
 get_languages_cb (STDARGS)
 {
-
   JSObjectRef array;
   const GList *languages, *link;
   guint i, n_languages = 0;
@@ -446,21 +328,10 @@ get_languages_cb (STDARGS)
   array = JSObjectMakeArray (context, n_languages, args, exception);
   g_free (args);
 
-  if (!array)
-    {
-      return JSValueMakeNull (context);
-    }
-  else
-    {
+  if (array)
       return array;
-    }
-}
 
-
-static JSValueRef
-get_language_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_language_get_name ((LightDMLanguage *) lightdm_get_language ()));
+  RETURNNULL;
 }
 
 
@@ -486,21 +357,10 @@ get_layouts_cb (STDARGS)
   array = JSObjectMakeArray (context, n_layouts, args, exception);
   g_free (args);
 
-  if (!array)
-    {
-      return JSValueMakeNull (context);
-    }
-  else
-    {
+  if (array)
       return array;
-    }
-}
 
-
-static JSValueRef
-get_layout_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_layout_get_name (lightdm_get_layout ()));
+  RETURNNULL;
 }
 
 
@@ -510,15 +370,12 @@ set_layout_cb (JSContextRef context,
            JSStringRef propertyName,
            JSValueRef value, JSValueRef * exception)
 {
-
   gchar *layout;
   const GList *layouts, *link;
   layout = arg_to_string (context, value, exception);
 
   if (!layout)
-    {
       return false;
-    }
 
   layouts = lightdm_get_layouts ();
 
@@ -543,7 +400,6 @@ set_layout_cb (JSContextRef context,
 static JSValueRef
 get_sessions_cb (STDARGS)
 {
-
   JSObjectRef array;
   const GList *sessions, *link;
   guint i, n_sessions = 0;
@@ -564,44 +420,12 @@ get_sessions_cb (STDARGS)
   array = JSObjectMakeArray (context, n_sessions, args, exception);
   g_free (args);
 
-  if (!array)
-    {
-      return JSValueMakeNull (context);
-    }
-  else
-    {
+  if (array)
       return array;
-    }
+
+  RETURNNULL;
 }
 
-
-static JSValueRef
-get_default_session_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_greeter_get_default_session_hint (GREETER));
-}
-
-
-static JSValueRef
-get_lock_hint_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_greeter_get_lock_hint (GREETER));
-}
-
-
-static JSValueRef
-get_autologin_timeout_cb (STDARGS)
-{
-  return JSValueMakeNumber (context, lightdm_greeter_get_autologin_timeout_hint (GREETER));
-}
-
-
-static JSValueRef
-cancel_autologin_cb (STDFUNCARGS)
-{
-  lightdm_greeter_cancel_autologin (GREETER);
-  return JSValueMakeNull (context);
-}
 
 
 static JSValueRef
@@ -610,46 +434,30 @@ authenticate_cb (STDFUNCARGS)
   gchar *name = NULL;
 
   if (argumentCount > 0)
-    {
       name = arg_to_string (context, arguments[0], exception);
-    }
 
   lightdm_greeter_authenticate (GREETER, name);
   g_free (name);
 
-  return JSValueMakeNull (context);
-}
-
-
-static JSValueRef
-authenticate_as_guest_cb (STDFUNCARGS)
-{
-  lightdm_greeter_authenticate_as_guest (GREETER);
-  return JSValueMakeNull (context);
+  RETURNNULL;
 }
 
 
 static JSValueRef
 get_hint_cb (STDFUNCARGS)
 {
-  gchar *hint_name = NULL;
+  gchar *hint_name;
   JSValueRef result;
 
-  if (argumentCount != 1)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (1);
 
   hint_name = arg_to_string (context, arguments[0], exception);
 
   if (!hint_name)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
-  result = string_or_null (context, lightdm_greeter_get_hint (GREETER, hint_name));
+  result = mkstringref (context, lightdm_greeter_get_hint (GREETER, hint_name));
   g_free (hint_name);
-
   return result;
 }
 
@@ -657,155 +465,19 @@ get_hint_cb (STDFUNCARGS)
 static JSValueRef
 respond_cb (STDFUNCARGS)
 {
-  gchar *response = NULL;
+  gchar *response;
 
-  if (argumentCount != 1)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (1);
 
   response = arg_to_string (context, arguments[0], exception);
 
-  if (!response)
+  if (response)
     {
-      return JSValueMakeNull (context);
+      lightdm_greeter_respond (GREETER, response);
+      g_free (response);
     }
 
-  lightdm_greeter_respond (GREETER, response);
-  g_free (response);
-
-  return JSValueMakeNull (context);
-}
-
-
-static JSValueRef
-cancel_authentication_cb (STDFUNCARGS)
-{
-  lightdm_greeter_cancel_authentication (GREETER);
-  return JSValueMakeNull (context);
-}
-
-
-static JSValueRef
-get_authentication_user_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_greeter_get_authentication_user (GREETER));
-}
-
-
-static JSValueRef
-get_has_guest_account_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_greeter_get_has_guest_account_hint (GREETER));
-}
-
-
-static JSValueRef
-get_hide_users_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_greeter_get_hide_users_hint (GREETER));
-}
-
-
-static JSValueRef
-get_select_user_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_greeter_get_select_user_hint (GREETER));
-}
-
-
-static JSValueRef
-get_select_guest_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_greeter_get_select_guest_hint (GREETER));
-}
-
-
-static JSValueRef
-get_autologin_user_cb (STDARGS)
-{
-  return string_or_null (context, lightdm_greeter_get_autologin_user_hint (GREETER));
-}
-
-
-static JSValueRef
-get_autologin_guest_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_greeter_get_autologin_guest_hint (GREETER));
-}
-
-
-static JSValueRef
-get_is_authenticated_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_greeter_get_is_authenticated (GREETER));
-}
-
-
-static JSValueRef
-get_in_authentication_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_greeter_get_in_authentication (GREETER));
-}
-
-
-static JSValueRef
-get_can_suspend_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_get_can_suspend ());
-}
-
-
-static JSValueRef
-suspend_cb (STDFUNCARGS)
-{
-  lightdm_suspend (NULL);
-  return JSValueMakeNull (context);
-}
-
-
-static JSValueRef
-get_can_hibernate_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_get_can_hibernate ());
-}
-
-
-static JSValueRef
-hibernate_cb (STDFUNCARGS)
-{
-  lightdm_hibernate (NULL);
-  return JSValueMakeNull (context);
-}
-
-
-static JSValueRef
-get_can_restart_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_get_can_restart ());
-}
-
-
-static JSValueRef
-restart_cb (STDFUNCARGS)
-{
-  lightdm_restart (NULL);
-  return JSValueMakeNull (context);
-}
-
-
-static JSValueRef
-get_can_shutdown_cb (STDARGS)
-{
-  return JSValueMakeBoolean (context, lightdm_get_can_shutdown ());
-}
-
-
-static JSValueRef
-shutdown_cb (STDFUNCARGS)
-{
-  lightdm_shutdown (NULL);
-  return JSValueMakeNull (context);
+  RETURNNULL;
 }
 
 
@@ -817,16 +489,14 @@ start_session_sync_cb (STDFUNCARGS)
   GError *err = NULL;
 
   if (argumentCount >= 1)
-    {
       session = arg_to_string (context, arguments[0], exception);
-    }
 
   result = lightdm_greeter_start_session_sync (GREETER, session, &err);
   g_free (session);
 
   if (err)
     {
-      _mkexception (context, exception, err->message);
+      *exception = mkexception (context, err->message);
       g_error_free (err);
     }
 
@@ -839,23 +509,17 @@ set_language_cb (STDFUNCARGS)
 {
   gchar *language = NULL;
 
-  if (argumentCount != 1)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (1);
 
   language = arg_to_string (context, arguments[0], exception);
 
-  if (!language)
+  if (language)
     {
-      return JSValueMakeNull (context);
+      lightdm_greeter_set_language (GREETER, language);
+      g_free (language);
     }
 
-  lightdm_greeter_set_language (GREETER, language);
-
-  g_free (language);
-
-  return JSValueMakeNull (context);
+  RETURNNULL;
 }
 
 
@@ -865,21 +529,15 @@ gettext_cb (STDFUNCARGS)
   gchar *string = NULL;
   JSValueRef result;
 
-  if (argumentCount != 1)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (1)
 
   string = arg_to_string (context, arguments[0], exception);
 
   if (!string)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
-  result = string_or_null (context, gettext (string));
+  result = mkstringref (context, gettext (string));
   g_free (string);
-
   return result;
 }
 
@@ -891,27 +549,18 @@ ngettext_cb (STDFUNCARGS)
   unsigned int n = 0;
   JSValueRef result;
 
-  if (argumentCount != 3)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (3);
 
   string = arg_to_string (context, arguments[0], exception);
-
   if (!string)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   plural_string = arg_to_string (context, arguments[1], exception);
-
   if (!plural_string)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   n = JSValueToNumber (context, arguments[2], exception);
-  result = string_or_null (context, ngettext (string, plural_string, n));
+  result = mkstringref (context, ngettext (string, plural_string, n));
 
   g_free (string);
   g_free (plural_string);
@@ -933,33 +582,26 @@ get_conf_str_cb (STDFUNCARGS)
   GError *err = NULL;
   JSValueRef result;
 
-  if (argumentCount != 2)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (2);
 
   section = arg_to_string (context, arguments[0], exception);
   if (!section)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   key = arg_to_string (context, arguments[1], exception);
   if (!key)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   value = g_key_file_get_string (keyfile, section, key, &err);
 
   if (err)
     {
-      _mkexception (context, exception, err->message);
+      *exception = mkexception (context, err->message);
       g_error_free (err);
-      return JSValueMakeNull (context);
+      RETURNNULL;
     }
 
-  result = string_or_null (context, value);
+  result = mkstringref (context, value);
 
   g_free (value);
 
@@ -980,30 +622,23 @@ get_conf_num_cb (STDFUNCARGS)
   gint value;
   GError *err = NULL;
 
-  if (argumentCount != 2)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (2);
 
   section = arg_to_string (context, arguments[0], exception);
   if (!section)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   key = arg_to_string (context, arguments[1], exception);
   if (!key)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   value = g_key_file_get_integer (keyfile, section, key, &err);
 
   if (err)
     {
-      _mkexception (context, exception, err->message);
+      *exception = mkexception (context, err->message);
       g_error_free (err);
-      return JSValueMakeNull (context);
+      RETURNNULL;
     }
 
   return JSValueMakeNumber (context, value);
@@ -1023,30 +658,23 @@ get_conf_bool_cb (STDFUNCARGS)
   gboolean value;
   GError *err = NULL;
 
-  if (argumentCount != 2)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (2);
 
   section = arg_to_string (context, arguments[0], exception);
   if (!section)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   key = arg_to_string (context, arguments[1], exception);
   if (!key)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   value = g_key_file_get_boolean (keyfile, section, key, &err);
 
   if (err)
     {
-      _mkexception (context, exception, err->message);
+      *exception = mkexception (context, err->message);
       g_error_free (err);
-      return JSValueMakeNull (context);
+      RETURNNULL;
     }
 
   return JSValueMakeBoolean (context, value);
@@ -1064,24 +692,19 @@ get_dirlist_cb (STDFUNCARGS)
   const gchar *dirent;
   GError *err = NULL;
 
-  if (argumentCount != 1)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (1);
 
   path = arg_to_string (context, arguments[0], exception);
   if (!path)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   dir = g_dir_open (path, 0, &err);
 
   if (err)
     {
-      _mkexception (context, exception, err->message);
+      *exception = mkexception (context, err->message);
       g_error_free (err);
-      return JSValueMakeNull (context);
+      RETURNNULL;
     }
 
   /*
@@ -1093,7 +716,7 @@ get_dirlist_cb (STDFUNCARGS)
       n_entries++;
       args = g_realloc (args, sizeof (JSValueRef) * (n_entries + 1));
       fullpath = g_build_filename (path, dirent, NULL);    /* Give theme developer full pathname */
-      args[(n_entries - 1)] = string_or_null (context, fullpath);
+      args[(n_entries - 1)] = mkstringref (context, fullpath);
       g_free (fullpath);
     }
 
@@ -1101,14 +724,10 @@ get_dirlist_cb (STDFUNCARGS)
 
   array = JSObjectMakeArray (context, n_entries, args, exception);
   g_free (args);
-  if (!array)
-    {
-      return JSValueMakeNull (context);
-    }
-  else
-    {
+  if (array)
       return array;
-    }
+
+  RETURNNULL;
 }
 
 
@@ -1118,16 +737,11 @@ txt2html_cb (STDFUNCARGS)
   gchar *txt;
   JSValueRef result;
 
-  if (argumentCount != 1)
-    {
-      return mkexception (context, exception, ARGNOTSUPPLIED);
-    }
+  ARGSMUST (1);
 
   txt = arg_to_string (context, arguments[0], exception);
   if (!txt)
-    {
-      return JSValueMakeNull (context);
-    }
+      RETURNNULL;
 
   /* Replace & with &amp; */
   /* Replace " with &quot; */
@@ -1141,7 +755,7 @@ txt2html_cb (STDFUNCARGS)
   txt = g_strreplace (txt, ">", "&gt;");
   txt = g_strreplace (txt, "\n", "<br>");
 
-  result = string_or_null (context, txt);
+  result = mkstringref (context, txt);
   g_free (txt);
 
   return result;
@@ -1385,7 +999,6 @@ window_object_cleared_callback (WebKitScriptWorld * world,
             (dom_window, "GreeterBridge", message);
         }
     }
-
 }
 
 
@@ -1410,6 +1023,10 @@ execute_js (WebKitWebExtension * extension, gchar * command_text)
     }
 }
 
+
+/****************************************************************************/
+/*            Callouts from C to the Javascript greeter code                */
+/****************************************************************************/
 
 static void
 show_prompt_cb (LightDMGreeter * greeter, const gchar * text,
@@ -1460,6 +1077,9 @@ autologin_timer_expired_cb (LightDMGreeter * greeter,
   execute_js (extension, "autologin_timer_expired()");
 }
 
+/****************************************************************************/
+/*                         Initialze web extention                          */
+/****************************************************************************/
 
 G_MODULE_EXPORT void
 webkit_web_extension_initialize (WebKitWebExtension * extension)
@@ -1467,10 +1087,10 @@ webkit_web_extension_initialize (WebKitWebExtension * extension)
   LightDMGreeter *greeter = lightdm_greeter_new ();
 
   g_signal_connect (webkit_script_world_get_default (), "window-object-cleared", G_CALLBACK (window_object_cleared_callback), greeter);
-  g_signal_connect (G_OBJECT (greeter), "authentication-complete", G_CALLBACK (authentication_complete_cb), extension);
-  g_signal_connect (G_OBJECT (greeter), "autologin-timer-expired", G_CALLBACK (autologin_timer_expired_cb), extension);
-  g_signal_connect (G_OBJECT (greeter), "show-prompt", G_CALLBACK (show_prompt_cb), extension);
-  g_signal_connect (G_OBJECT (greeter), "show-message", G_CALLBACK (show_message_cb), extension);
+  g_signal_connect (G_OBJECT (greeter), "authentication-complete",               G_CALLBACK (authentication_complete_cb), extension);
+  g_signal_connect (G_OBJECT (greeter), "autologin-timer-expired",               G_CALLBACK (autologin_timer_expired_cb), extension);
+  g_signal_connect (G_OBJECT (greeter), "show-prompt",                           G_CALLBACK (show_prompt_cb), extension);
+  g_signal_connect (G_OBJECT (greeter), "show-message",                          G_CALLBACK (show_message_cb), extension);
 
   lightdm_greeter_connect_sync (greeter, NULL);
 

@@ -232,7 +232,7 @@ main (int argc, char **argv)
    */
   css_provider = gtk_css_provider_new ();
   gtk_css_provider_load_from_data (css_provider,
-                   BLACKBACKGROUND, -1, NULL);
+                   BLACKBACKGROUND, strlen(BLACKBACKGROUND), NULL);
   gtk_style_context_add_provider_for_screen (screen,
                          GTK_STYLE_PROVIDER
                          (css_provider),
