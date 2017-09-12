@@ -197,16 +197,12 @@ static char *
 escape (const gchar * text)
 {
   gchar *escaped;
-  gchar *result;
 
   /* Make sure all newlines, tabs, etc. are escaped. */
   escaped = g_strescape (text, NULL);
 
   /* Replace ' with \\' */
-  result = g_strreplace (escaped, "'", "\\'");
-
-  g_free (escaped);
-  return result;
+  return g_strreplace (escaped, "'", "\\'");
 }
 
 
@@ -276,91 +272,62 @@ get_user_image_cb (STDARGS)
   RETURNNULL;
 }
 
-
 static JSValueRef
-get_users_cb (STDARGS)
+make_list (STDARGS, JSClassRef class, GList *list)
 {
   JSObjectRef array;
-  const GList *users, *link;
-  guint i, n_users = 0;
+  const GList *link;
+  guint i, n_list = 0;
   JSValueRef *args;
 
-  users = lightdm_user_list_get_users (lightdm_user_list_get_instance ());
-  n_users = g_list_length ((GList *) users);
-  args = g_malloc (sizeof (JSValueRef) * (n_users + 1));
+  n_list = g_list_length ((GList *) list);
+  args = g_malloc (sizeof (JSValueRef) * (n_list + 1));
 
-  for (i = 0, link = users; link; i++, link = link->next)
+  for (i = 0, link = list; link; i++, link = link->next)
     {
-      LightDMUser *user = link->data;
-      g_object_ref (user);
-      args[i] = JSObjectMake (context, lightdm_user_class, user);
+      g_object_ref (link->data);
+      args[i] = JSObjectMake (context, class, link->data);
     }
 
-  array = JSObjectMakeArray (context, n_users, args, exception);
+  array = JSObjectMakeArray (context, n_list, args, exception);
   g_free (args);
 
   if (array)
       return array;
 
   RETURNNULL;
+}
+
+
+static JSValueRef
+get_users_cb (STDARGS)
+{
+  return make_list (context, thisObject, propertyName, exception, lightdm_user_class,
+                   lightdm_user_list_get_users (lightdm_user_list_get_instance ()));
 }
 
 
 static JSValueRef
 get_languages_cb (STDARGS)
 {
-  JSObjectRef array;
-  const GList *languages, *link;
-  guint i, n_languages = 0;
-  JSValueRef *args;
-
-  languages = lightdm_get_languages ();
-  n_languages = g_list_length ((GList *) languages);
-  args = g_malloc (sizeof (JSValueRef) * (n_languages + 1));
-
-  for (i = 0, link = languages; link; i++, link = link->next)
-    {
-      LightDMLanguage *language = link->data;
-      g_object_ref (language);
-      args[i] = JSObjectMake (context, lightdm_language_class, language);
-    }
-
-  array = JSObjectMakeArray (context, n_languages, args, exception);
-  g_free (args);
-
-  if (array)
-      return array;
-
-  RETURNNULL;
+  return make_list (context, thisObject, propertyName, exception, lightdm_language_class,
+                   lightdm_get_languages ());
 }
 
 
 static JSValueRef
 get_layouts_cb (STDARGS)
 {
-  JSObjectRef array;
-  const GList *layouts, *link;
-  guint i, n_layouts = 0;
-  JSValueRef *args;
+  return make_list (context, thisObject, propertyName, exception, lightdm_layout_class,
+                   lightdm_get_layouts ());
+}
 
-  layouts = lightdm_get_layouts ();
-  n_layouts = g_list_length ((GList *) layouts);
-  args = g_malloc (sizeof (JSValueRef) * (n_layouts + 1));
 
-  for (i = 0, link = layouts; link; i++, link = link->next)
-    {
-      LightDMLayout *layout = link->data;
-      g_object_ref (layout);
-      args[i] = JSObjectMake (context, lightdm_layout_class, layout);
-    }
-
-  array = JSObjectMakeArray (context, n_layouts, args, exception);
-  g_free (args);
-
-  if (array)
-      return array;
-
-  RETURNNULL;
+static JSValueRef
+get_sessions_cb (STDARGS)
+{
+  return make_list (context, thisObject, propertyName, exception, lightdm_session_class,
+                   lightdm_get_sessions ());
 }
 
 
@@ -395,37 +362,6 @@ set_layout_cb (JSContextRef context,
 
   return true;
 }
-
-
-static JSValueRef
-get_sessions_cb (STDARGS)
-{
-  JSObjectRef array;
-  const GList *sessions, *link;
-  guint i, n_sessions = 0;
-  JSValueRef *args;
-
-  sessions = lightdm_get_sessions ();
-  n_sessions = g_list_length ((GList *) sessions);
-  args = g_malloc (sizeof (JSValueRef) * (n_sessions + 1));
-
-  for (i = 0, link = sessions; link; i++, link = link->next)
-    {
-      LightDMSession *session = link->data;
-      g_object_ref (session);
-
-      args[i] = JSObjectMake (context, lightdm_session_class, session);
-    }
-
-  array = JSObjectMakeArray (context, n_sessions, args, exception);
-  g_free (args);
-
-  if (array)
-      return array;
-
-  RETURNNULL;
-}
-
 
 
 static JSValueRef
@@ -1005,22 +941,19 @@ window_object_cleared_callback (WebKitScriptWorld * world,
 static void
 execute_js (WebKitWebExtension * extension, gchar * command_text)
 {
-  WebKitWebPage *web_page;
   WebKitFrame *web_frame;
   JSGlobalContextRef jsContext;
+  JSStringRef command;
+  WebKitWebPage *web_page = webkit_web_extension_get_page (extension, page_id);
 
-  web_page = webkit_web_extension_get_page (extension, page_id);
+  if (!web_page)
+    return;
 
-  if (web_page)
-    {
-      JSStringRef command;
-
-      web_frame = webkit_web_page_get_main_frame (web_page);
-      jsContext = webkit_frame_get_javascript_global_context (web_frame);
-      command = JSStringCreateWithUTF8CString (command_text);
-      JSEvaluateScript (jsContext, command, NULL, NULL, 0, NULL);
-      JSStringRelease (command);
-    }
+  web_frame = webkit_web_page_get_main_frame (web_page);
+  jsContext = webkit_frame_get_javascript_global_context (web_frame);
+  command = JSStringCreateWithUTF8CString (command_text);
+  JSEvaluateScript (jsContext, command, NULL, NULL, 0, NULL);
+  JSStringRelease (command);
 }
 
 
