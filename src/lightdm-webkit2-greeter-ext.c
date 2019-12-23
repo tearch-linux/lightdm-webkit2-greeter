@@ -248,12 +248,44 @@ static JSValueRef get_can_hibernate_cb (STDARGS)            { return JSValueMake
 static JSValueRef get_can_restart_cb (STDARGS)              { return JSValueMakeBoolean (context, lightdm_get_can_restart ()); }
 static JSValueRef get_can_shutdown_cb (STDARGS)             { return JSValueMakeBoolean (context, lightdm_get_can_shutdown ()); }
 static JSValueRef cancel_autologin_cb (STDFUNCARGS)         { lightdm_greeter_cancel_autologin (GREETER); RETURNNULL; }
-static JSValueRef authenticate_as_guest_cb (STDFUNCARGS)    { lightdm_greeter_authenticate_as_guest (GREETER); RETURNNULL; }
-static JSValueRef cancel_authentication_cb (STDFUNCARGS)    { lightdm_greeter_cancel_authentication (GREETER); RETURNNULL; }
 static JSValueRef suspend_cb (STDFUNCARGS)                  { lightdm_suspend (NULL); RETURNNULL; }
 static JSValueRef hibernate_cb (STDFUNCARGS)                { lightdm_hibernate (NULL); RETURNNULL; }
 static JSValueRef restart_cb (STDFUNCARGS)                  { lightdm_restart (NULL); RETURNNULL; }
 static JSValueRef shutdown_cb (STDFUNCARGS)                 { lightdm_shutdown (NULL); RETURNNULL; }
+
+
+static JSValueRef
+authenticate_as_guest_cb (STDFUNCARGS)
+{
+  GError *err = NULL;
+
+  lightdm_greeter_authenticate_as_guest (GREETER, &err);
+
+  if (err)
+    {
+      *exception = mkexception (context, err->message);
+      g_error_free (err);
+    }
+
+  RETURNNULL;
+}
+
+
+static JSValueRef
+cancel_authentication_cb (STDFUNCARGS)
+{
+  GError *err = NULL;
+
+  lightdm_greeter_cancel_authentication (GREETER, &err);
+
+  if (err)
+    {
+      *exception = mkexception (context, err->message);
+      g_error_free (err);
+    }
+
+  RETURNNULL;
+}
 
 
 static JSValueRef
@@ -271,6 +303,7 @@ get_user_image_cb (STDARGS)
 
   RETURNNULL;
 }
+
 
 static JSValueRef
 make_list (STDARGS, JSClassRef class, GList *list)
@@ -367,13 +400,20 @@ set_layout_cb (JSContextRef context,
 static JSValueRef
 authenticate_cb (STDFUNCARGS)
 {
+  GError *err = NULL;
   gchar *name = NULL;
 
   if (argumentCount > 0)
       name = arg_to_string (context, arguments[0], exception);
 
-  lightdm_greeter_authenticate (GREETER, name);
+  lightdm_greeter_authenticate (GREETER, name, &err);
   g_free (name);
+
+  if (err)
+    {
+      *exception = mkexception (context, err->message);
+      g_error_free (err);
+    }
 
   RETURNNULL;
 }
@@ -409,8 +449,14 @@ respond_cb (STDFUNCARGS)
 
   if (response)
     {
-      lightdm_greeter_respond (GREETER, response);
+      GError *err = NULL;
+      lightdm_greeter_respond (GREETER, response, &err);
       g_free (response);
+      if (err)
+        {
+          *exception = mkexception (context, err->message);
+          g_error_free (err);
+        }
     }
 
   RETURNNULL;
@@ -451,8 +497,14 @@ set_language_cb (STDFUNCARGS)
 
   if (language)
     {
-      lightdm_greeter_set_language (GREETER, language);
+      GError *err = NULL;
+      lightdm_greeter_set_language (GREETER, language, &err);
       g_free (language);
+      if (err)
+        {
+          *exception = mkexception (context, err->message);
+          g_error_free (err);
+        }
     }
 
   RETURNNULL;
